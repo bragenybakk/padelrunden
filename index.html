@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+<title>Padelrunden</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: én smal kolonne som en baneoversikt — faner øverst, kampkort som baner, tabell som resultattavle */
+:root {
+  --bg: #eef2f6;
+  --surface: #ffffff;
+  --ink: #12233a;
+  --muted: #5b6b80;
+  --line: #d5dde7;
+  --court: #1f4fa3;       /* banens blå kunstgress */
+  --court-ink: #ffffff;
+  --ball: #d9e021;        /* padelballen, brukt sparsomt */
+  --ball-ink: #1b2400;
+  --good: #1d7a4a;
+  --warn: #a35a00;
+  --f-display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --f-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1520; --surface: #152132; --ink: #e6edf5; --muted: #93a3b8; --line: #26364b;
+    --court: #3d74d6; --court-ink: #ffffff; --ball: #d9e021; --ball-ink: #1b2400;
+    --good: #4cc488; --warn: #f0a24a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1520; --surface: #152132; --ink: #e6edf5; --muted: #93a3b8; --line: #26364b;
+  --court: #3d74d6; --court-ink: #ffffff; --ball: #d9e021; --ball-ink: #1b2400;
+  --good: #4cc488; --warn: #f0a24a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  padding-block: 14px 10px; display: flex; flex-direction: column; gap: 10px;
+}
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: 30px; letter-spacing: .01em; margin: 0; text-transform: uppercase; line-height: 1; }
+h1 span { color: var(--court); }
+.status { font-size: 13px; color: var(--muted); }
+nav.tabs { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
+nav.tabs button {
+  font: 600 14px var(--f-body); color: var(--muted); background: none; border: 0; border-radius: 7px; padding: 9px 4px; cursor: pointer;
+}
+nav.tabs button[aria-selected="true"] { background: var(--court); color: var(--court-ink); }
+nav.tabs button:disabled { opacity: .45; cursor: default; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 22px; text-transform: uppercase; letter-spacing: .03em; margin: 0; text-wrap: balance; }
+.label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+section.panel { display: flex; flex-direction: column; gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.seg button { font: 600 15px var(--f-body); background: none; border: 0; border-right: 1px solid var(--line); padding: 11px 6px; color: var(--ink); cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--court); color: var(--court-ink); }
+.hint { font-size: 13px; color: var(--muted); margin: 0; max-width: 62ch; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+input[type="text"], input[type="number"], select {
+  font: 500 16px var(--f-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; min-width: 0;
+}
+input:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid color-mix(in srgb, var(--court) 55%, transparent); outline-offset: 1px; }
+.addrow { display: flex; gap: 8px; }
+.addrow input { flex: 1; }
+.btn {
+  font: 600 15px var(--f-body); border-radius: 10px; padding: 11px 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap;
+}
+.btn.primary { background: var(--court); border-color: var(--court); color: var(--court-ink); }
+.btn.big { padding: 15px; font-size: 17px; width: 100%; }
+.btn.danger { color: var(--warn); }
+.btn:disabled { opacity: .5; cursor: default; }
+.players { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.players li { display: flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px 6px 5px 12px; font-weight: 500; }
+.players li button { border: 0; background: none; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 6px; cursor: pointer; border-radius: 999px; }
+.players li button:hover { color: var(--warn); }
+.example { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; background: var(--ball); color: var(--ball-ink); border-radius: 4px; padding: 2px 6px; margin-left: 6px; vertical-align: 2px; }
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+.summary strong { font-variant-numeric: tabular-nums; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+.check input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--court); flex: none; }
+
+/* Kampkort = en bane */
+.roundhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.matches { display: flex; flex-direction: column; gap: 12px; }
+.court {
+  background: var(--court); color: var(--court-ink); border-radius: 12px; padding: 12px 14px 14px; position: relative; overflow: hidden;
+}
+.court::after { /* nettet */
+  content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px dashed color-mix(in srgb, var(--court-ink) 35%, transparent); pointer-events: none;
+}
+.court .cname { font-family: var(--f-display); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; font-size: 14px; opacity: .85; margin-bottom: 6px; display: flex; justify-content: space-between; }
+.team { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding-block: 8px; position: relative; z-index: 1; }
+.team .names { font-weight: 600; font-size: 16px; min-width: 0; overflow-wrap: anywhere; }
+.team .names small { display: block; font-weight: 500; opacity: .8; font-size: 12px; }
+.score {
+  font: 700 28px var(--f-display); width: 76px; text-align: center; padding: 4px 6px; border-radius: 8px; border: 2px solid transparent;
+  background: color-mix(in srgb, var(--court-ink) 92%, var(--court)); color: #12233a; font-variant-numeric: tabular-nums;
+}
+.score.win { background: var(--ball); color: var(--ball-ink); }
+.score:focus-visible { outline: 3px solid var(--ball); outline-offset: 1px; }
+.score::placeholder { color: #8a97a8; }
+.sitting { font-size: 14px; color: var(--muted); }
+.sitting b { color: var(--ink); }
+.error { color: var(--warn); font-size: 13px; font-weight: 600; }
+details.hist { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+details.hist summary { cursor: pointer; padding: 12px 14px; font-weight: 600; display: flex; justify-content: space-between; gap: 10px; }
+details.hist .inner { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.histrow { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; font-size: 14px; }
+.histrow .r { text-align: right; }
+.histrow .sc { display: flex; gap: 4px; align-items: center; }
+.histrow input { width: 54px; padding: 6px; text-align: center; font: 700 18px var(--f-display); font-variant-numeric: tabular-nums; }
+
+/* Resultattavle */
+.tablewrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { padding: 10px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+td.name, th.name { text-align: left; white-space: normal; }
+td.name { font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.rank { font: 700 20px var(--f-display); color: var(--muted); text-align: center; width: 36px; }
+tr.lead td.rank { color: var(--ball-ink); }
+tr.lead td.rank span { background: var(--ball); border-radius: 6px; padding: 0 7px; display: inline-block; }
+td.pts { font: 700 20px var(--f-display); }
+.pos { color: var(--good); }
+.neg { color: var(--warn); }
+.confirm { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+footer { font-size: 12px; color: var(--muted); }
+@media (max-width: 420px) {
+  h1 { font-size: 26px; }
+  .score { width: 66px; font-size: 26px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .court { transition: transform .15s ease; }
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Padel<span>runden</span></h1>
+      <div class="status" id="status"></div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button id="tab-setup" role="tab" data-view="setup">Oppsett</button>
+      <button id="tab-round" role="tab" data-view="round">Runder</button>
+      <button id="tab-table" role="tab" data-view="table">Tabell</button>
+    </nav>
+  </header>
+  <main id="view"></main>
+  <footer>Turneringen lagres i denne nettleseren på denne enheten.</footer>
+</div>
+
+<script>
+(function () {
+  const KEY = "padelrunden.v1";
+  const EXAMPLE = ["Ingrid", "Magnus", "Sofie", "Henrik", "Thea", "Jonas", "Emma", "Sander"];
+  let uid = 1;
+  const freshState = () => ({
+    mode: "americano", points: 24, courts: 2, sitBonus: true,
+    players: EXAMPLE.map(n => ({ id: "p" + (uid++), name: n })), isExample: true,
+    rounds: [], started: false, view: "setup", confirmReset: false
+  });
+  let S;
+  try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
+  if (!S || !Array.isArray(S.players)) S = freshState();
+  S.players.forEach(p => { const n = parseInt(String(p.id).slice(1)); if (n >= uid) uid = n + 1; });
+  S.confirmReset = false;
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const nameOf = id => (S.players.find(p => p.id === id) || { name: "?" }).name;
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const MODE = { americano: "Americano", mexicano: "Mexicano" };
+
+  const activeCourts = () => Math.max(0, Math.min(S.courts, Math.floor(S.players.length / 4)));
+  const matchDone = m => Number.isFinite(m.sa) && Number.isFinite(m.sb);
+  const roundDone = r => r.matches.every(matchDone);
+
+  // ---------- Statistikk ----------
+  function stats() {
+    const st = {};
+    S.players.forEach(p => st[p.id] = { id: p.id, name: p.name, pts: 0, played: 0, w: 0, d: 0, l: 0, diff: 0, sits: 0, bonus: 0, lastSat: -1 });
+    S.rounds.forEach((r, ri) => {
+      r.matches.forEach(m => {
+        if (!matchDone(m)) return;
+        const add = (ids, mine, theirs) => ids.forEach(id => {
+          const x = st[id]; if (!x) return;
+          x.pts += mine; x.played++; x.diff += mine - theirs;
+          if (mine > theirs) x.w++; else if (mine < theirs) x.l++; else x.d++;
+        });
+        add(m.a, m.sa, m.sb); add(m.b, m.sb, m.sa);
+      });
+      r.sits.forEach(id => {
+        const x = st[id]; if (!x) return;
+        x.sits++; x.lastSat = ri;
+        if (S.sitBonus && roundDone(r)) { const b = Math.round(S.points / 2); x.pts += b; x.bonus += b; }
+      });
+    });
+    return st;
+  }
+  function ranking() {
+    return Object.values(stats()).sort((a, b) =>
+      b.pts - a.pts || b.w - a.w || b.diff - a.diff || a.name.localeCompare(b.name, "nb"));
+  }
+
+  // ---------- Rundegenerering ----------
+  function pickSitters(nSit) {
+    if (nSit <= 0) return [];
+    const st = stats();
+    const order = shuffle(S.players.map(p => p.id)).sort((x, y) =>
+      st[x].sits - st[y].sits || st[x].lastSat - st[y].lastSat);
+    return order.slice(0, nSit);
+  }
+  function history() {
+    const partner = {}, opp = {};
+    const inc = (o, a, b) => { const k = a < b ? a + "|" + b : b + "|" + a; o[k] = (o[k] || 0) + 1; };
+    S.rounds.forEach(r => r.matches.forEach(m => {
+      inc(partner, m.a[0], m.a[1]); inc(partner, m.b[0], m.b[1]);
+      m.a.forEach(x => m.b.forEach(y => inc(opp, x, y)));
+    }));
+    const get = (o, a, b) => o[a < b ? a + "|" + b : b + "|" + a] || 0;
+    return { p: (a, b) => get(partner, a, b), o: (a, b) => get(opp, a, b) };
+  }
+  function americanoMatches(playing) {
+    const h = history();
+    const splits = q => [[[q[0], q[1]], [q[2], q[3]]], [[q[0], q[2]], [q[1], q[3]]], [[q[0], q[3]], [q[1], q[2]]]];
+    const cost = (a, b) => 100 * (h.p(a[0], a[1]) + h.p(b[0], b[1])) + a.reduce((s, x) => s + b.reduce((t, y) => t + h.o(x, y), 0), 0);
+    let best = null, bestCost = Infinity;
+    for (let t = 0; t < 600; t++) {
+      const sh = shuffle(playing); let total = 0; const ms = [];
+      for (let i = 0; i < sh.length; i += 4) {
+        let bs = null, bc = Infinity;
+        splits(sh.slice(i, i + 4)).forEach(([a, b]) => { const c = cost(a, b); if (c < bc) { bc = c; bs = [a, b]; } });
+        total += bc; ms.push(bs);
+      }
+      if (total < bestCost) { bestCost = total; best = ms; if (total === 0) break; }
+    }
+    return best;
+  }
+  function mexicanoMatches(playing) {
+    let order;
+    if (S.rounds.length === 0) order = shuffle(playing);
+    else { const rk = ranking().map(x => x.id); order = rk.filter(id => playing.includes(id)); }
+    const ms = [];
+    for (let i = 0; i < order.length; i += 4) {
+      const q = order.slice(i, i + 4); // 1+4 mot 2+3
+      ms.push([[q[0], q[3]], [q[1], q[2]]]);
+    }
+    return ms;
+  }
+  function newRound() {
+    const c = activeCourts();
+    const sits = pickSitters(S.players.length - c * 4);
+    const playing = S.players.map(p => p.id).filter(id => !sits.includes(id));
+    const pairs = S.mode === "americano" ? americanoMatches(playing) : mexicanoMatches(playing);
+    S.rounds.push({ matches: pairs.map(([a, b], i) => ({ court: i + 1, a, b, sa: null, sb: null })), sits });
+  }
+
+  // ---------- Visning ----------
+  function render() {
+    const started = S.started;
+    document.querySelectorAll("nav.tabs button").forEach(b => {
+      b.setAttribute("aria-selected", String(b.dataset.view === S.view));
+      b.disabled = !started && b.dataset.view !== "setup";
+    });
+    $("#status").textContent = started
+      ? `${MODE[S.mode]} · ${S.points} poeng · runde ${S.rounds.length}`
+      : "Ny turnering";
+    const v = $("#view");
+    if (S.view === "round" && started) v.innerHTML = roundView();
+    else if (S.view === "table" && started) v.innerHTML = tableView();
+    else v.innerHTML = setupView();
+  }
+
+  function setupView() {
+    const n = S.players.length, c = activeCourts(), sit = n - c * 4;
+    const lock = S.started;
+    const seg = (name, val, opts) => `<div class="seg" role="group">${opts.map(([k, l]) =>
+      `<button data-set="${name}" data-val="${k}" aria-pressed="${String(val) === String(k)}" ${lock ? "disabled" : ""}>${l}</button>`).join("")}</div>`;
+    let info = "";
+    if (n < 4) info = `<span class="error">Legg inn minst 4 spillere for å starte.</span>`;
+    else info = `<div><strong>${n}</strong> spillere på <strong>${c}</strong> ${c === 1 ? "bane" : "baner"}${sit ? ` · <strong>${sit}</strong> står over hver runde` : " · alle spiller hver runde"}</div>
+      ${S.courts > c ? `<div class="hint">Du har valgt ${S.courts} baner, men spillerne fyller bare ${c}.</div>` : ""}`;
+    return `<section class="panel">
+      <div class="field"><span class="label">Format</span>
+        ${seg("mode", S.mode, [["americano", "Americano"], ["mexicano", "Mexicano"]])}
+        <p class="hint">${S.mode === "americano"
+          ? "Du bytter makker hver runde. Programmet prøver å gi alle nye makkere og motstandere så lenge det går."
+          : "Første runde trekkes tilfeldig. Deretter settes kampene etter tabellen: 1. og 4. spiller mot 2. og 3. på bane 1, 5. og 8. mot 6. og 7. på bane 2, og så videre."}</p>
+      </div>
+      <div class="row2">
+        <div class="field"><label class="label" for="points">Poeng per kamp</label>
+          <select id="points" ${lock ? "disabled" : ""}>${[16, 21, 24, 32].map(p => `<option value="${p}" ${S.points === p ? "selected" : ""}>${p}</option>`).join("")}</select>
+        </div>
+        <div class="field"><label class="label" for="courts">Baner</label>
+          <select id="courts" ${lock ? "disabled" : ""}>${[1, 2, 3, 4, 5, 6, 8].map(p => `<option value="${p}" ${S.courts === p ? "selected" : ""}>${p}</option>`).join("")}</select>
+        </div>
+      </div>
+      <p class="hint">Hver kamp spilles til summen av poengene er ${S.points}, for eksempel ${Math.ceil(S.points / 2) + 3}–${S.points - Math.ceil(S.points / 2) - 3}. Hver spiller får lagets poeng i tabellen.</p>
+      <div class="field">
+        <span class="label">Spillere (${n})${S.isExample && !lock ? '<span class="example">Eksempel</span>' : ""}</span>
+        ${lock ? "" : `<form class="addrow" id="addform"><input type="text" id="newname" placeholder="Navn på spiller" autocomplete="off" maxlength="30"><button class="btn" type="submit">Legg til</button></form>`}
+        <ul class="players">${S.players.map(p => `<li>${esc(p.name)}${lock ? "" : `<button data-del="${p.id}" aria-label="Fjern ${esc(p.name)}">×</button>`}</li>`).join("")}</ul>
+        ${S.isExample && !lock ? `<button class="btn" data-act="clear" style="align-self:flex-start">Fjern eksempelspillerne</button>` : ""}
+      </div>
+      <label class="check"><input type="checkbox" id="sitbonus" ${S.sitBonus ? "checked" : ""} ${lock ? "disabled" : ""}>
+        <span>Gi spillere som står over halvparten av poengene (${Math.round(S.points / 2)}) for runden, så tabellen blir rettferdig.</span></label>
+      <div class="summary">${info}</div>
+      ${lock
+        ? (S.confirmReset
+          ? `<div class="confirm"><span class="error">Hele turneringen slettes.</span><button class="btn danger" data-act="reset">Ja, start på nytt</button><button class="btn" data-act="cancelreset">Avbryt</button></div>`
+          : `<button class="btn danger" data-act="askreset">Ny turnering</button>`)
+        : `<button class="btn primary big" data-act="start" ${n < 4 ? "disabled" : ""}>Start ${MODE[S.mode]}</button>`}
+    </section>`;
+  }
+
+  function matchCard(m, ri) {
+    const done = matchDone(m);
+    const cls = (x, y) => done && x > y ? "score win" : "score";
+    const team = (ids, side, val, other) => `<div class="team">
+      <div class="names">${esc(nameOf(ids[0]))} &amp; ${esc(nameOf(ids[1]))}</div>
+      <input class="${cls(val, other)}" type="number" inputmode="numeric" min="0" max="${S.points}" id="s-${ri}-${m.court}-${side}"
+        data-r="${ri}" data-c="${m.court}" data-side="${side}" value="${Number.isFinite(val) ? val : ""}" placeholder="–" aria-label="Poeng ${esc(nameOf(ids[0]))} og ${esc(nameOf(ids[1]))}">
+    </div>`;
+    return `<div class="court"><div class="cname"><span>Bane ${m.court}</span><span>${done ? "Ferdig" : "av " + S.points}</span></div>
+      ${team(m.a, "a", m.sa, m.sb)}${team(m.b, "b", m.sb, m.sa)}</div>`;
+  }
+
+  function roundView() {
+    const ri = S.rounds.length - 1, r = S.rounds[ri];
+    const done = roundDone(r);
+    const left = r.matches.filter(m => !matchDone(m)).length;
+    const past = S.rounds.slice(0, -1).map((pr, i) => ({ pr, i })).reverse();
+    return `<section class="panel">
+      <div class="roundhead"><h2>Runde ${ri + 1}</h2><span class="label">${done ? "Alle kamper ferdige" : left + " " + (left === 1 ? "kamp" : "kamper") + " igjen"}</span></div>
+      <div class="matches">${r.matches.map(m => matchCard(m, ri)).join("")}</div>
+      ${r.sits.length ? `<div class="sitting">Står over: <b>${r.sits.map(id => esc(nameOf(id))).join(", ")}</b>${S.sitBonus ? ` (får ${Math.round(S.points / 2)} poeng)` : ""}</div>` : ""}
+      <button class="btn primary big" data-act="next" ${done ? "" : "disabled"}>${done ? "Neste runde" : "Fyll inn alle resultater for å gå videre"}</button>
+      ${true ? `<button class="btn danger" data-act="undo" style="align-self:flex-start">Slett runde ${ri + 1}</button>` : ""}
+      ${past.length ? `<div class="label">Tidligere runder</div>` + past.map(({ pr, i }) => `<details class="hist"><summary><span>Runde ${i + 1}</span><span class="label">${pr.matches.length} ${pr.matches.length === 1 ? "kamp" : "kamper"}</span></summary><div class="inner">
+        ${pr.matches.map(m => `<div class="histrow"><span>${esc(nameOf(m.a[0]))} &amp; ${esc(nameOf(m.a[1]))}</span>
+          <span class="sc"><input type="number" inputmode="numeric" id="s-${i}-${m.court}-a" data-r="${i}" data-c="${m.court}" data-side="a" value="${m.sa ?? ""}" aria-label="Poeng lag 1">–<input type="number" inputmode="numeric" id="s-${i}-${m.court}-b" data-r="${i}" data-c="${m.court}" data-side="b" value="${m.sb ?? ""}" aria-label="Poeng lag 2"></span>
+          <span class="r">${esc(nameOf(m.b[0]))} &amp; ${esc(nameOf(m.b[1]))}</span></div>`).join("")}
+        ${pr.sits.length ? `<div class="sitting">Sto over: ${pr.sits.map(id => esc(nameOf(id))).join(", ")}</div>` : ""}
+      </div></details>`).join("") : ""}
+    </section>`;
+  }
+
+  function tableView() {
+    const rk = ranking();
+    const anyBonus = rk.some(x => x.bonus > 0);
+    let prev = null, place = 0;
+    return `<section class="panel">
+      <div class="roundhead"><h2>Tabell</h2><span class="label">Etter ${S.rounds.filter(roundDone).length} ferdige runder</span></div>
+      <div class="tablewrap"><table>
+        <thead><tr><th>#</th><th class="name">Spiller</th><th>Poeng</th><th>K</th><th>V-U-T</th><th>+/-</th></tr></thead>
+        <tbody>${rk.map((x, i) => {
+          if (!prev || prev.pts !== x.pts || prev.w !== x.w || prev.diff !== x.diff) place = i + 1;
+          prev = x;
+          return `<tr class="${place === 1 && x.pts > 0 ? "lead" : ""}"><td class="rank"><span>${place}</span></td><td class="name">${esc(x.name)}</td>
+          <td class="pts">${x.pts}</td><td>${x.played}</td><td>${x.w}-${x.d}-${x.l}</td>
+          <td class="${x.diff > 0 ? "pos" : x.diff < 0 ? "neg" : ""}">${x.diff > 0 ? "+" : ""}${x.diff}</td></tr>`;
+        }).join("")}</tbody>
+      </table></div>
+      <p class="hint">Sortert på poeng, så seire, så poengdifferanse. K = kamper spilt.${anyBonus ? ` Poeng inkluderer ${Math.round(S.points / 2)} per runde stått over.` : ""}${S.mode === "mexicano" ? " Neste runde settes opp etter denne tabellen." : ""}</p>
+    </section>`;
+  }
+
+  // ---------- Hendelser ----------
+  document.addEventListener("click", e => {
+    const t = e.target.closest("button"); if (!t || t.disabled) return;
+    if (t.dataset.view) { S.view = t.dataset.view; save(); render(); window.scrollTo(0, 0); return; }
+    if (t.dataset.set) { S[t.dataset.set] = t.dataset.val; save(); render(); return; }
+    if (t.dataset.del) { S.players = S.players.filter(p => p.id !== t.dataset.del); save(); render(); return; }
+    const a = t.dataset.act;
+    if (a === "clear") { S.players = []; S.isExample = false; }
+    if (a === "start") { S.started = true; S.rounds = []; newRound(); S.view = "round"; }
+    if (a === "next") { newRound(); window.scrollTo(0, 0); }
+    if (a === "undo") { S.rounds.pop(); if (!S.rounds.length) { S.started = false; S.view = "setup"; } }
+    if (a === "askreset") S.confirmReset = true;
+    if (a === "cancelreset") S.confirmReset = false;
+    if (a === "reset") { const keep = { mode: S.mode, points: S.points, courts: S.courts, sitBonus: S.sitBonus, players: S.players };
+      S = Object.assign(freshState(), keep, { isExample: false }); }
+    save(); render();
+  });
+  document.addEventListener("submit", e => {
+    if (e.target.id !== "addform") return;
+    e.preventDefault();
+    const inp = $("#newname"); const names = inp.value.split(",").map(s => s.trim()).filter(Boolean);
+    if (!names.length) return;
+    if (S.isExample) { S.players = []; S.isExample = false; }
+    names.forEach(n => S.players.push({ id: "p" + (uid++), name: n }));
+    save(); render(); $("#newname") && $("#newname").focus();
+  });
+  document.addEventListener("change", e => {
+    const t = e.target;
+    if (t.id === "points") S.points = +t.value;
+    else if (t.id === "courts") S.courts = +t.value;
+    else if (t.id === "sitbonus") S.sitBonus = t.checked;
+    else return;
+    save(); render();
+  });
+  // Resultater: skriv inn ett lag, det andre fylles ut automatisk
+  document.addEventListener("input", e => {
+    const t = e.target; if (!t.dataset.side) return;
+    const r = S.rounds[+t.dataset.r], m = r && r.matches.find(x => x.court === +t.dataset.c); if (!m) return;
+    const other = t.dataset.side === "a" ? "b" : "a";
+    const raw = t.value.trim();
+    if (raw === "") { m["s" + t.dataset.side] = null; m["s" + other] = null; }
+    else {
+      const v = Math.max(0, Math.min(S.points, parseInt(raw, 10) || 0));
+      m["s" + t.dataset.side] = v; m["s" + other] = S.points - v;
+    }
+    save();
+    const o = document.getElementById(`s-${t.dataset.r}-${t.dataset.c}-${other}`);
+    if (o) o.value = m["s" + other] ?? "";
+  });
+  document.addEventListener("focusout", e => {
+    if (e.target.dataset && e.target.dataset.side) setTimeout(() => {
+      const f = document.activeElement; const id = f && f.id;
+      render(); if (id && document.getElementById(id)) document.getElementById(id).focus();
+    }, 0);
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Enter" && e.target.dataset && e.target.dataset.side) e.target.blur();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
